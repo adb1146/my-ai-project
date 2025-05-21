@@ -1,0 +1,16 @@
+{
+  "orgName": "Agentforce scratch org",
+  "edition": "Developer",
+  "features": ["EnableSetPasswordInApi","Einstein1AIPlatform","EinsteinBuilderFree"],
+  "settings": {
+    "lightningExperienceSettings": {
+      "enableS1DesktopEnabled": true
+    },
+    "mobileSettings": {
+      "enableS1EncryptedStoragePref2": false
+    },
+    "einsteinGptSettings" : {
+      "enableEinsteinGptPlatform" : true
+    }
+  }
+}
