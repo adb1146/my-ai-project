@@ -1,0 +1,113 @@
+<template>
+  <div class="chatbot-container">
+    <div class="slds-card">
+      <div class="slds-card__header slds-grid">
+        <header class="slds-media slds-media_center slds-has-flexi-truncate">
+          <div class="slds-media__figure">
+            <lightning-icon
+              icon-name="utility:chat"
+              alternative-text="Chatbot"
+              size="small"
+            ></lightning-icon>
+          </div>
+          <div class="slds-media__body">
+            <h2 class="slds-card__header-title">
+              <span>AI Assistant</span>
+            </h2>
+          </div>
+          <div class="slds-no-flex">
+            <lightning-combobox
+              name="objectType"
+              label="Create Record Type"
+              value={selectedObject}
+              options={objectOptions}
+              onchange={handleObjectChange}
+              dropdown-alignment="right"
+              variant="label-hidden"
+            >
+            </lightning-combobox>
+          </div>
+        </header>
+      </div>
+      <div class="slds-card__body">
+        <div class="chat-messages-container" lwc:dom="manual">
+          <!-- Messages will be rendered dynamically by JS -->
+        </div>
+
+        <!-- Loading spinner -->
+        <template if:true={isLoading}>
+          <div class="ai-message-container">
+            <div class="ai-message">
+              <lightning-spinner
+                alternative-text="Loading"
+                size="small"
+              ></lightning-spinner>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Extracted data confirmation -->
+      <template if:true={extractedData}>
+        <div class="slds-card__footer confirmation-section">
+          <div class="slds-box slds-theme_shade slds-m-bottom_small">
+            <h3 class="slds-text-heading_small slds-m-bottom_small">
+              Confirm {selectedObject} Information
+            </h3>
+            <div class="extracted-data">
+              <template for:each={extractedDataFields} for:item="field">
+                <div
+                  key={field.name}
+                  class="slds-form-element slds-m-bottom_x-small"
+                >
+                  <label class="slds-form-element__label">{field.label}</label>
+                  <div class="slds-form-element__control">
+                    <div class="slds-text-body_regular">{field.value}</div>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <div class="slds-grid slds-grid_align-end slds-m-top_medium">
+              <button
+                class="slds-button slds-button_neutral"
+                onclick={handleCancelRecord}
+              >
+                Cancel
+              </button>
+              <button
+                class="slds-button slds-button_brand"
+                onclick={handleCreateRecord}
+              >
+                Create Record
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <div class="slds-card__footer">
+        <div class="chat-input">
+          <lightning-input
+            type="text"
+            label="Message"
+            variant="label-hidden"
+            placeholder="Type a message..."
+            value={userInput}
+            onchange={handleInputChange}
+            onkeypress={handleKeyPress}
+            disabled={isLoading}
+          >
+          </lightning-input>
+          <lightning-button-icon
+            icon-name="utility:send"
+            variant="brand"
+            onclick={handleSendMessage}
+            disabled={sendButtonDisabled}
+            alternative-text="Send"
+          >
+          </lightning-button-icon>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

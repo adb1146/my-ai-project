@@ -1,0 +1,121 @@
+.chatbot-container {
+  display: flex;
+  flex-direction: column;
+  height: 650px; /* Increased height */
+  max-height: 85vh;
+  width: 100%;
+}
+
+.slds-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.slds-card__body {
+  flex: 1;
+  overflow: hidden;
+  padding: 0.75rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-messages-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  flex: 1;
+}
+
+.user-message-container,
+.ai-message-container,
+.system-message-container {
+  display: flex;
+  margin-bottom: 0.75rem;
+}
+
+.user-message-container {
+  justify-content: flex-end;
+}
+
+.ai-message-container,
+.system-message-container {
+  justify-content: flex-start;
+}
+
+.user-message,
+.ai-message,
+.system-message {
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  max-width: 85%;
+  word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.user-message {
+  background-color: #1589ee;
+  color: white;
+  border-bottom-right-radius: 0;
+}
+
+.ai-message {
+  background-color: #f3f3f3;
+  border-bottom-left-radius: 0;
+}
+
+.system-message {
+  background-color: #faffbd;
+  border-radius: 0.5rem;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  width: 100%;
+  overflow: hidden;
+}
+
+.sender {
+  font-weight: bold;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+}
+
+.timestamp {
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.chat-input {
+  display: flex;
+  align-items: center;
+  margin-top: 0.75rem;
+  border-top: 1px solid #dddbda;
+  padding-top: 0.75rem;
+}
+
+.chat-input lightning-input {
+  flex: 1;
+  margin-right: 0.5rem;
+}
+
+.confirmation-section {
+  padding: 0.75rem;
+  border-top: 1px solid #dddbda;
+}
+
+.extracted-data {
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid #dddbda;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+  background-color: white;
+}
