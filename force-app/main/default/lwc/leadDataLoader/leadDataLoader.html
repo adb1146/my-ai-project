@@ -1,0 +1,350 @@
+<template>
+  <lightning-card title="Lead Data Loader" icon-name="standard:lead">
+    <div class="slds-p-horizontal_medium">
+      <!-- Step indicator -->
+      <!-- Step Progress Bar -->
+      <div class="slds-grid slds-wrap slds-gutters slds-m-bottom_medium">
+        <div class="slds-col slds-size_1-of-4 slds-text-align_center">
+          <div class={uploadStepClass}>
+            <div class="slds-text-title">Step 1</div>
+            <div class="slds-text-heading_small">Upload File</div>
+          </div>
+        </div>
+        <div class="slds-col slds-size_1-of-4 slds-text-align_center">
+          <div class={mappingStepClass}>
+            <div class="slds-text-title">Step 2</div>
+            <div class="slds-text-heading_small">Map Fields</div>
+          </div>
+        </div>
+        <div class="slds-col slds-size_1-of-4 slds-text-align_center">
+          <div class={importStepClass}>
+            <div class="slds-text-title">Step 3</div>
+            <div class="slds-text-heading_small">Import Data</div>
+          </div>
+        </div>
+        <div class="slds-col slds-size_1-of-4 slds-text-align_center">
+          <div class={resultsStepClass}>
+            <div class="slds-text-title">Step 4</div>
+            <div class="slds-text-heading_small">View Results</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 1: Upload File -->
+      <div if:true={isUploadStep} class="slds-m-top_medium">
+        <lightning-layout multiple-rows="true">
+          <lightning-layout-item size="12" class="slds-m-bottom_medium">
+            <div class="slds-text-heading_small slds-m-bottom_small">
+              Upload your CSV file with Lead data
+            </div>
+            <lightning-file-upload
+              label="Upload CSV File"
+              name="csvFileUploader"
+              accept={acceptedFormats}
+              record-id={recordId}
+              onuploadfinished={handleUploadFinished}
+              multiple="false"
+            >
+            </lightning-file-upload>
+          </lightning-layout-item>
+        </lightning-layout>
+
+        <!-- Sample template download -->
+        <div class="slds-m-top_medium">
+          <a onclick={downloadTemplate}>Download Sample Template</a>
+        </div>
+      </div>
+
+      <!-- Step 2: Mapping Fields -->
+      <div if:true={isMappingStep} class="slds-m-top_medium">
+        <!-- CSV Preview -->
+        <div class="slds-text-heading_small slds-m-bottom_small">
+          CSV Preview
+        </div>
+        <div class="slds-scrollable_x">
+          <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+            <thead>
+              <tr class="slds-text-title_caps">
+                <template
+                  for:each={csvHeaders}
+                  for:item="header"
+                  for:index="index"
+                >
+                  <th key={header} scope="col">
+                    <div class="slds-truncate">{header}</div>
+                  </th>
+                </template>
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={formattedPreviewData} for:item="row">
+                <tr key={row.uniqueId} class="slds-hint-parent">
+                  <template for:each={row.cells} for:item="cell">
+                    <td key={cell.key} class="slds-truncate">{cell.value}</td>
+                  </template>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- AI Mapping Suggestions Panel -->
+        <div
+          if:true={showMappingSuggestions}
+          class="slds-box slds-theme_shade slds-m-top_medium slds-m-bottom_medium"
+        >
+          <div class="slds-grid slds-grid_vertical">
+            <div class="slds-col">
+              <lightning-icon
+                icon-name="utility:einstein"
+                alternative-text="AI"
+                size="small"
+                class="slds-m-right_x-small"
+              ></lightning-icon>
+              <span class="slds-text-heading_small slds-m-bottom_small"
+                >AI-Suggested Field Mappings</span
+              >
+            </div>
+            <div class="slds-col slds-m-top_small">
+              <p>
+                The AI has automatically mapped your CSV columns to Lead fields
+                based on their names and content.
+              </p>
+              <p class="slds-m-top_x-small">
+                Review the suggestions below and make any adjustments if needed.
+              </p>
+            </div>
+
+            <div class="slds-col slds-m-top_medium">
+              <!-- List of suggested mappings with confidence indicators -->
+              <div class="slds-box slds-m-bottom_medium">
+                <template for:each={formattedMappings} for:item="mapping">
+                  <div
+                    key={mapping.header}
+                    class="slds-grid slds-gutters slds-p-vertical_x-small"
+                  >
+                    <div class="slds-col slds-size_4-of-12">
+                      <div class="slds-truncate slds-text-body_regular">
+                        {mapping.header}
+                      </div>
+                    </div>
+                    <div class="slds-col slds-size_6-of-12">
+                      <div class="slds-grid slds-grid_vertical-align-center">
+                        <lightning-icon
+                          icon-name="utility:forward"
+                          size="xx-small"
+                          class="slds-m-right_x-small"
+                        ></lightning-icon>
+                        <div class="slds-truncate">
+                          <template if:true={mapping.hasMapping}>
+                            <strong>{mapping.fieldApiName}</strong>
+                            <template if:true={mapping.hasConfidence}>
+                              <span class="slds-badge slds-m-left_small">
+                                <span class="confidence-badge">
+                                  {mapping.confidence}% match
+                                </span>
+                              </span>
+                            </template>
+                          </template>
+                          <template if:false={mapping.hasMapping}>
+                            <span class="slds-text-color_weak">Not mapped</span>
+                          </template>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <div
+              class="slds-col slds-m-top_medium slds-grid slds-grid_align-end"
+            >
+              <lightning-button
+                label="Accept All Mappings"
+                variant="brand"
+                onclick={acceptAiMappings}
+                class="slds-m-right_small"
+              >
+              </lightning-button>
+              <lightning-button
+                label="Edit Mappings Manually"
+                onclick={dismissMappingSuggestions}
+              >
+              </lightning-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Field Mapping -->
+        <div
+          class="slds-text-heading_small slds-m-top_medium slds-m-bottom_small"
+        >
+          Map Fields
+        </div>
+        <div class="slds-scrollable_y" style="max-height: 300px">
+          <template for:each={mappingItems} for:item="item">
+            <lightning-layout
+              key={item.uniqueId}
+              multiple-rows="true"
+              class="slds-m-bottom_x-small"
+            >
+              <lightning-layout-item size="4" padding="horizontal-small">
+                <div class="slds-form-element">
+                  <div class="slds-form-element__control">
+                    <span class="slds-form-element__static">{item.header}</span>
+                  </div>
+                </div>
+              </lightning-layout-item>
+              <lightning-layout-item size="8" padding="horizontal-small">
+                <lightning-combobox
+                  data-header={item.header}
+                  name={item.header}
+                  label="Map to Lead Field"
+                  value={item.value}
+                  placeholder="Select Lead Field"
+                  options={leadFieldOptions}
+                  onchange={handleFieldMapping}
+                  variant="label-hidden"
+                >
+                </lightning-combobox>
+              </lightning-layout-item>
+            </lightning-layout>
+          </template>
+        </div>
+      </div>
+
+      <!-- Step 3: Import Data -->
+      <div if:true={isImportStep} class="slds-m-top_medium">
+        <lightning-layout multiple-rows="true">
+          <lightning-layout-item size="12" class="slds-m-bottom_medium">
+            <div class="slds-text-heading_small slds-m-bottom_small">
+              Import Progress
+            </div>
+            <lightning-progress-bar
+              value={importProgress}
+              size="large"
+            ></lightning-progress-bar>
+            <div class="slds-text-body_small slds-m-top_x-small">
+              {processedRecords} of {totalRecords} records processed
+            </div>
+          </lightning-layout-item>
+        </lightning-layout>
+      </div>
+
+      <!-- Step 4: Results -->
+      <div if:true={isResultsStep} class="slds-m-top_medium">
+        <div class="slds-text-heading_small slds-m-bottom_small">
+          Import Results
+        </div>
+
+        <lightning-layout multiple-rows="true">
+          <lightning-layout-item size="12" class="slds-m-bottom_medium">
+            <div class="slds-grid slds-wrap slds-gutters">
+              <div class="slds-col slds-size_1-of-3">
+                <div
+                  class="slds-box slds-box_x-small slds-text-align_center slds-m-around_x-small"
+                >
+                  <div class="slds-text-heading_large">{successCount}</div>
+                  <div class="slds-text-title">Successfully Imported</div>
+                </div>
+              </div>
+              <div class="slds-col slds-size_1-of-3">
+                <div
+                  class="slds-box slds-box_x-small slds-text-align_center slds-m-around_x-small"
+                >
+                  <div class="slds-text-heading_large">{errorCount}</div>
+                  <div class="slds-text-title">Failed</div>
+                </div>
+              </div>
+              <div class="slds-col slds-size_1-of-3">
+                <div
+                  class="slds-box slds-box_x-small slds-text-align_center slds-m-around_x-small"
+                >
+                  <div class="slds-text-heading_large">{totalRecords}</div>
+                  <div class="slds-text-title">Total</div>
+                </div>
+              </div>
+            </div>
+          </lightning-layout-item>
+        </lightning-layout>
+
+        <template if:true={hasErrors}>
+          <div
+            class="slds-text-heading_small slds-m-top_medium slds-m-bottom_small"
+          >
+            Error Details
+          </div>
+          <div class="slds-scrollable_y" style="max-height: 200px">
+            <table
+              class="slds-table slds-table_bordered slds-table_cell-buffer"
+            >
+              <thead>
+                <tr class="slds-text-title_caps">
+                  <th scope="col">Row</th>
+                  <th scope="col">Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template for:each={errors} for:item="error" for:index="index">
+                  <tr key={error.uniqueId}>
+                    <td>{error.row}</td>
+                    <td>{error.message}</td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <div class="slds-m-top_medium">
+            <lightning-button
+              label="Export Errors"
+              variant="brand"
+              onclick={exportErrors}
+            ></lightning-button>
+          </div>
+        </template>
+      </div>
+
+      <!-- Navigation Buttons -->
+      <div class="slds-m-top_medium">
+        <lightning-layout horizontal-align="spread">
+          <lightning-layout-item>
+            <lightning-button
+              if:false={isUploadStep}
+              label="Back"
+              onclick={handleBack}
+            ></lightning-button>
+          </lightning-layout-item>
+          <lightning-layout-item>
+            <lightning-button
+              if:true={isUploadStep}
+              disabled={isNextDisabled}
+              label="Next"
+              variant="brand"
+              onclick={handleNext}
+            ></lightning-button>
+            <lightning-button
+              if:true={isMappingStep}
+              disabled={isNextDisabled}
+              label="Start Import"
+              variant="brand"
+              onclick={validateAndStartImport}
+            ></lightning-button>
+            <lightning-button
+              if:true={isImportStep}
+              disabled={isProcessing}
+              label={importButtonLabel}
+              variant="brand"
+            ></lightning-button>
+            <lightning-button
+              if:true={isResultsStep}
+              label="Start New Import"
+              variant="brand"
+              onclick={handleReset}
+            ></lightning-button>
+          </lightning-layout-item>
+        </lightning-layout>
+      </div>
+    </div>
+  </lightning-card>
+</template>

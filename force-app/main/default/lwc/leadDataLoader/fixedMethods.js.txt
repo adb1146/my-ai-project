@@ -1,0 +1,324 @@
+// Fixed parseCSV method
+parseCSV(csvData) {
+    if (!csvData || csvData.trim() === '') {
+        console.error('CSV data is empty');
+        this.dispatchEvent(
+            new ShowToastEvent({
+                title: 'Error parsing CSV',
+                message: 'The CSV file appears to be empty.',
+                variant: 'error'
+            })
+        );
+        return;
+    }
+    
+    console.log('Starting CSV parsing with improved logic');
+    try {
+        // Split by lines, ensuring we handle both CRLF and LF line endings
+        const lines = csvData.split(/\r?\n/);
+        if (!lines || lines.length === 0) {
+            throw new Error('No lines found in CSV data');
+        }
+        
+        console.log(`Found ${lines.length} lines in CSV data`);
+
+        // Get headers from first line
+        const headerLine = lines[0].trim();
+        if (!headerLine || headerLine === '') {
+            throw new Error('CSV header line is empty');
+        }
+        
+        // Parse header row using the same logic as data rows for consistency
+        const headers = this.parseCSVLine(headerLine);
+        this.csvHeaders = headers;
+        
+        console.log('Parsed headers:', JSON.stringify(headers));
+        
+        // Process data rows, skipping header
+        const data = [];
+        const uniqueSignatures = new Set(); // Track unique row signatures to avoid duplicates
+        
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line === '') {
+                console.log(`Skipping empty line at index ${i}`);
+                continue; // Skip empty lines
+            }
+            
+            try {
+                const values = this.parseCSVLine(line);
+                if (values.length !== headers.length) {
+                    console.warn(`Line ${i} has different number of fields than headers. Headers: ${headers.length}, Fields: ${values.length}`);
+                }
+                
+                // Create object with header keys
+                const rowData = {};
+                headers.forEach((header, index) => {
+                    rowData[header] = index < values.length ? values[index] : '';
+                });
+                
+                // Generate a signature for this row to detect duplicates
+                const rowSignature = JSON.stringify(values);
+                
+                // Only add if it's a unique row
+                if (!uniqueSignatures.has(rowSignature)) {
+                    uniqueSignatures.add(rowSignature);
+                    rowData._uniqueId = `row-${i}`; // Add a unique ID for keying in the UI
+                    data.push(rowData);
+                    console.log(`Added row ${i} with signature: ${rowSignature.substring(0, 40)}...`);
+                } else {
+                    console.log(`Skipping duplicate row ${i} with signature: ${rowSignature.substring(0, 40)}...`);
+                }
+            } catch (lineError) {
+                console.error(`Error parsing line ${i}:`, lineError);
+            }
+        }
+        
+        console.log(`Successfully parsed ${data.length} unique rows of data from ${lines.length-1} total rows`);
+        
+        // Store full data set
+        this.csvData = data;
+        
+        // Create a preview dataset with up to 5 unique records
+        this.previewData = data.slice(0, 5);
+        console.log(`Preview data created with ${this.previewData.length} unique records`);
+        
+        // Attempt auto-mapping
+        this.autoMapFields();
+        
+        // Move to mapping step
+        this.nextStep();
+        
+    } catch (error) {
+        console.error('Error parsing CSV data:', error);
+        this.dispatchEvent(
+            new ShowToastEvent({
+                title: 'Error parsing CSV',
+                message: error.message || 'Failed to parse CSV data. Please check the file format.',
+                variant: 'error'
+            })
+        );
+    }
+}
+
+// Fixed autoMapFields method
+autoMapFields() {
+    // DEBUGGING: Critical logging to troubleshoot AI mapping issues
+    console.log('======== AUTO MAP FIELDS START ========');
+    console.log('CSV Headers:', JSON.stringify(this.csvHeaders));
+    console.log('Lead fields loaded:', this.leadFields ? this.leadFields.length : 0);
+    
+    // Check if the wire service has completed
+    if (!this.leadFieldOptions || this.leadFieldOptions.length === 0) {
+        console.error('CRITICAL ERROR: Lead field options not available - wire may not have completed');
+        console.log('Current leadFieldOptions:', JSON.stringify(this.leadFieldOptions));
+        console.log('Current leadFields:', JSON.stringify(this.leadFields && this.leadFields.length > 0 ? this.leadFields.slice(0, 3) : [])); 
+    }
+    
+    if (!this.csvHeaders || !this.leadFields) {
+        console.error('Cannot perform mapping - missing headers or fields');
+        return;
+    }
+    
+    const suggestedMappings = {};
+    const confidenceScores = {};
+    const fieldMappingScores = {};
+    
+    // Create a map to store all potential matches with confidence scores
+    this.csvHeaders.forEach(header => {
+        fieldMappingScores[header] = [];
+        
+        // Step 1: Try exact matches (highest priority)
+        this.leadFields.forEach(field => {
+            let score = 0;
+            const headerLower = header.toLowerCase();
+            const fieldLabelLower = field.label.toLowerCase();
+            const fieldApiNameLower = field.apiName.toLowerCase();
+            
+            // Exact match with label or API name (case insensitive)
+            if (headerLower === fieldLabelLower || headerLower === fieldApiNameLower) {
+                score = 100; // Perfect match
+                console.log(`Perfect match found: ${header} -> ${field.apiName} (score: 100)`);
+            }
+            // Normalize header and field names by removing spaces
+            else if (headerLower.replace(/\s+/g, '') === fieldLabelLower.replace(/\s+/g, '') ||
+                    headerLower.replace(/\s+/g, '') === fieldApiNameLower.replace(/\s+/g, '')) {
+                score = 95; // Almost perfect match
+                console.log(`Space-normalized match: ${header} -> ${field.apiName} (score: 95)`);
+            }
+            // Contains full word match
+            else if (fieldLabelLower.includes(` ${headerLower} `) || 
+                    fieldLabelLower.startsWith(`${headerLower} `) || 
+                    fieldLabelLower.endsWith(` ${headerLower}`)) {
+                score = 90; // Very good match
+            }
+            // Substring match
+            else if (fieldLabelLower.includes(headerLower) || fieldApiNameLower.includes(headerLower)) {
+                score = 80; // Good match
+            }
+            // Word similarity (check if words appear in both)
+            else {
+                const headerWords = headerLower.replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+                const fieldWords = fieldLabelLower.replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+                
+                // Count common words
+                const commonWords = headerWords.filter(word => fieldWords.includes(word));
+                if (commonWords.length > 0) {
+                    score = 70 * (commonWords.length / Math.max(headerWords.length, fieldWords.length));
+                }
+            }
+            
+            // Step 2: Adjust scores based on field content analysis (if we have data)
+            if (this.csvData && this.csvData.length > 0) {
+                // Get sample values for this header
+                const sampleValues = this.csvData.slice(0, 5).map(row => row[header]).filter(val => val);
+                
+                if (sampleValues.length > 0) {
+                    // Email pattern detection for email fields
+                    if (field.apiName.toLowerCase().includes('email')) {
+                        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                        const emailMatches = sampleValues.filter(val => emailPattern.test(val)).length;
+                        if (emailMatches > 0) {
+                            score += 10 * (emailMatches / sampleValues.length);
+                        }
+                    }
+                    
+                    // Phone pattern detection for phone fields
+                    if (field.apiName.toLowerCase().includes('phone')) {
+                        const phonePattern = /^[0-9-+()\\s]{7,20}$/; // Simple pattern for demo
+                        const phoneMatches = sampleValues.filter(val => phonePattern.test(val)).length;
+                        if (phoneMatches > 0) {
+                            score += 10 * (phoneMatches / sampleValues.length);
+                        }
+                    }
+                }
+            }
+            
+            // Step 3: Adjust scores based on required fields
+            if (field.required) {
+                score += 5; // Slight boost for required fields
+            }
+            
+            // Add to potential matches if score is above threshold
+            if (score > 30) {
+                fieldMappingScores[header].push({
+                    field: field.apiName,
+                    score: score,
+                    label: field.label
+                });
+            }
+        });
+    });
+    
+    // Process the fieldMappingScores to get the best match for each header
+    console.log('Field mapping scores calculated, finding best matches');
+    
+    // For each CSV header, find the best Lead field match
+    Object.keys(fieldMappingScores).forEach(header => {
+        // Sort matches by score (highest first)
+        const matches = fieldMappingScores[header].sort((a, b) => b.score - a.score);
+        
+        if (matches.length > 0) {
+            // Get the best match
+            const bestMatch = matches[0];
+            suggestedMappings[header] = bestMatch.field;
+            confidenceScores[header] = bestMatch.score;
+            console.log(`Best match for ${header}: ${bestMatch.field} (score: ${bestMatch.score})`);
+        }
+    });
+    
+    const lastNameField = this.leadFields.find(field => field.apiName === 'LastName');
+    const companyField = this.leadFields.find(field => field.apiName === 'Company');
+    
+    // Ensure LastName is mapped to something appropriate if available
+    if (lastNameField && !Object.values(suggestedMappings).includes('LastName')) {
+        const possibleLastNameHeaders = ['last name', 'lastname', 'surname', 'family name', 'last'];
+        const lastNameHeader = this.csvHeaders.find(header => 
+            possibleLastNameHeaders.includes(header.toLowerCase()));
+            
+        if (lastNameHeader) {
+            suggestedMappings[lastNameHeader] = 'LastName';
+            confidenceScores[lastNameHeader] = 85; // Good confidence for name patterns
+        }
+    }
+    
+    // Ensure Company is mapped to something appropriate if available
+    if (companyField && !Object.values(suggestedMappings).includes('Company')) {
+        const possibleCompanyHeaders = ['company', 'organization', 'organisation', 'business', 'firm'];
+        const companyHeader = this.csvHeaders.find(header => 
+            possibleCompanyHeaders.includes(header.toLowerCase()));
+            
+        if (companyHeader) {
+            suggestedMappings[companyHeader] = 'Company';
+            confidenceScores[companyHeader] = 85; // Good confidence for company patterns
+        }
+    }
+    
+    // Store the AI suggested mappings and confidence scores
+    this.aiSuggestedMappings = suggestedMappings;
+    this.mappingConfidence = confidenceScores;
+    
+    // Apply the suggestions to the actual mappings
+    this.mappings = { ...suggestedMappings };
+    
+    // Show AI mapping suggestions panel
+    this.showAIFieldMappings();
+    
+    // Notify the user that AI mapping has been done
+    const mappedCount = Object.keys(suggestedMappings).length;
+    if (mappedCount > 0) {
+        this.dispatchEvent(
+            new ShowToastEvent({
+                title: 'AI Field Mapping Suggestions Ready',
+                message: `AI suggested mappings for ${mappedCount} of ${this.csvHeaders.length} fields. Please review and confirm.`,
+                variant: 'info'
+            })
+        );
+    }
+    console.log('======== AUTO MAP FIELDS END ========');
+}
+
+// Fixed method for showing AI mapping suggestions
+showAIFieldMappings() {
+    // Only show if we have suggestions
+    if (Object.keys(this.aiSuggestedMappings).length > 0) {
+        console.log('Showing AI mapping suggestions panel with:', 
+                   Object.keys(this.aiSuggestedMappings).length, 'mappings');
+        this.showMappingSuggestions = true;
+    } else {
+        console.log('No AI mapping suggestions available to show');
+    }
+}
+
+// Fixed method for accepting AI mappings
+acceptAiMappings() {
+    console.log('Accepting AI mappings...');
+    console.log('Current aiSuggestedMappings:', JSON.stringify(this.aiSuggestedMappings));
+    
+    if (this.aiSuggestedMappings && Object.keys(this.aiSuggestedMappings).length > 0) {
+        // Create a new object to ensure reactivity
+        this.mappings = { ...this.aiSuggestedMappings };
+        
+        console.log('Applied AI mappings successfully:', JSON.stringify(this.mappings));
+        
+        this.dispatchEvent(
+            new ShowToastEvent({
+                title: 'AI Mappings Applied',
+                message: `Applied ${Object.keys(this.mappings).length} field mappings`,
+                variant: 'success'
+            })
+        );
+    } else {
+        console.log('No AI mappings to apply');
+        this.dispatchEvent(
+            new ShowToastEvent({
+                title: 'No AI Mappings',
+                message: 'No AI mapping suggestions are available',
+                variant: 'info'
+            })
+        );
+    }
+    
+    // Close the panel
+    this.showMappingSuggestions = false;
+}

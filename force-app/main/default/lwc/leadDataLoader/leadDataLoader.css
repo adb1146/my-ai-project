@@ -1,0 +1,32 @@
+.confidence-high {
+  background-color: #027e46;
+  color: white;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+.confidence-good {
+  background-color: #2e844a;
+  color: white;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+.confidence-medium {
+  background-color: #91754d;
+  color: white;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+.confidence-low {
+  background-color: #ba5f54;
+  color: white;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+/* Make auto-mapped fields stand out slightly */
+.ai-mapped-field {
+  background-color: #f3f2f2;
+}
