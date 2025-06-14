@@ -1,0 +1,7 @@
+**/__tests__/**
+**/node_modules/**
+**/bower_components/**
+coverage/**
+**/vendor/**
+**/*.min.js
+force-app/main/default/lwc/jsconfig.json
