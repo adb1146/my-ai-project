@@ -1,0 +1,84 @@
+<template>
+  <lightning-card>
+    <div slot="title">
+      <div class="slds-grid slds-gutters">
+        <div class="slds-col">
+          <span>New Contact</span>
+        </div>
+      </div>
+    </div>
+    <div slot="actions">
+      <lightning-button-icon
+        icon-name={toggleIcon}
+        alternative-text="Toggle Form"
+        title="Toggle Form"
+        variant="border-filled"
+        onclick={toggleForm}
+      >
+      </lightning-button-icon>
+    </div>
+    <div class="slds-p-horizontal_small">
+      <template if:true={isFormVisible}>
+        <div class="custom-form">
+          <lightning-messages></lightning-messages>
+
+          <lightning-input
+            label="First Name"
+            name="firstName"
+            value={firstName}
+            onchange={handleInputChange}
+            required
+            message-when-value-missing="Complete this field."
+            class="slds-m-bottom_small"
+          >
+          </lightning-input>
+
+          <lightning-input
+            label="Last Name"
+            name="lastName"
+            value={lastName}
+            onchange={handleInputChange}
+            required
+            message-when-value-missing="Complete this field."
+            class="slds-m-bottom_small"
+          >
+          </lightning-input>
+
+          <lightning-input
+            label="Email"
+            name="email"
+            value={email}
+            onchange={handleInputChange}
+            type="email"
+            class="slds-m-bottom_small"
+          >
+          </lightning-input>
+
+          <lightning-input
+            label="Phone"
+            name="phone"
+            value={phone}
+            onchange={handleInputChange}
+            type="tel"
+            class="slds-m-bottom_small"
+          >
+          </lightning-input>
+
+          <div class="slds-m-top_medium">
+            <lightning-button
+              variant="brand"
+              label="Save Contact"
+              onclick={handleSubmit}
+            >
+            </lightning-button>
+          </div>
+        </div>
+      </template>
+      <template if:false={isFormVisible}>
+        <div class="slds-p-around_medium slds-text-align_center">
+          <p>Form is collapsed. Click the toggle button to expand.</p>
+        </div>
+      </template>
+    </div>
+  </lightning-card>
+</template>

@@ -1,0 +1,30 @@
+/* 
+  Attempting aggressive override due to suspected server-side caching issues 
+  in an org with component-cache clearing disabled.
+*/
+
+/* Target the input field directly when it has an error */
+lightning-input.slds-has-error .slds-input {
+  background-color: #e6ffed !important; /* Light green background */
+  border-color: #2e844a !important; /* Green border */
+  color: #000000 !important; /* Ensure text is readable, e.g., black */
+  box-shadow: 0 0 0 1px #2e844a !important; /* Green shadow, similar to SLDS error shadow */
+}
+
+/* Target the label of an input field in an error state */
+lightning-input.slds-has-error .slds-form-element__label {
+  color: #2e844a !important; /* Green label text */
+}
+
+/* Target the help text (error message) of an input field */
+lightning-input.slds-has-error .slds-form-element__help {
+  color: #2e844a !important; /* Green error message text */
+}
+
+/* Fallback SLDS hooks, also with !important, though direct overrides above are stronger */
+:host {
+  --sds-c-input-color-border-error: #2e844a !important;
+  --sds-c-input-shadow-error: 0 0 0 1px #2e844a !important;
+  --sds-c-label-color-error: #2e844a !important;
+  --sds-c-form-element-help-text-color-error: #2e844a !important;
+}
